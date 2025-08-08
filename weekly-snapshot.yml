@@ -1,1 +1,42 @@
+name: Weekly YouTube Snapshot
 
+# 毎週日曜 0:00 UTC（日本時間では日曜 9:00）に自動実行
+on:
+  schedule:
+    - cron: '0 0 * * 0'
+  workflow_dispatch:   # 任意で、手動実行も可能に
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1) リポジトリをチェックアウト
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      # 2) Python 環境をセットアップ
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      # 3) 依存ライブラリをインストール
+      - name: Install dependencies
+        run: pip install google-api-python-client pandas
+
+      # 4) スナップショット取得スクリプトを実行
+      - name: Run snapshot script
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: |
+          python snapshot.py
+
+      # 5) 生成された CSV をコミット＆プッシュ
+      - name: Commit and push snapshots
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add snapshots.csv
+          git commit -m "Weekly snapshot: $(date +'%F')" || echo "No changes to commit"
+          git push
